@@ -2,6 +2,7 @@
 from random import random
 from datetime import datetime
 from instance import Instance
+from solution import Solution
 
 class TS_CPS:   
   def __init__(self, ternure, iterations, max_time, instance_file):
@@ -12,7 +13,7 @@ class TS_CPS:
     self.iterations = iterations
     self.max_time = max_time
 
-    self._best_solution = self.constructive_heuristic()
+    self._best_solution = None
     self._solution = None
     self._cost = None
     self._cand_list = None
@@ -37,8 +38,7 @@ class TS_CPS:
       f.readline()
         
       for i in range(size):
-        line = f.readline().split(' ')
-        line.pop()
+        line = f.readline().split(' ')        
         coverages.append(list(map(int, line)))
 
     return Instance(name, size, cover_size, distances, coverages)
@@ -64,8 +64,10 @@ class TS_CPS:
   def update_cand_list():
     pass
 
-  def create_empty_solution(): 
-    pass
+  def create_empty_solution(self):     
+    size = self.instance.size      
+    edges = [[0  for i in range(size)] for j in range(size)] 
+    return Solution(self.instance, edges)
 
   def constructive_heuristic(self):
     pass
@@ -73,11 +75,10 @@ class TS_CPS:
   def neighborhood_move(self):
     pass
 
-  def solve(self):
-    print(self.instance.distances[0][1])
+  def solve(self):    
     start_time = datetime.now()
 
-    # self._best_solution = self.create_empty_solution()
+    self._best_solution = self.create_empty_solution()
     # self.constructive_heuristic()
     self._tabu_list = self.make_tabu_list()    
 
