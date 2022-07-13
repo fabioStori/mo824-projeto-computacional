@@ -1,4 +1,5 @@
 
+from multiprocessing.reduction import duplicate
 from random import random
 from datetime import datetime
 from instance import Instance
@@ -32,31 +33,39 @@ class TS_CPS:
 
       for i in range(size):
         line = f.readline().split(' ')
-        line.pop()
+        # line.pop()
         distances.append(list(map(int, line)))
 
       f.readline()
         
       for i in range(size):
-        line = f.readline().split(' ')        
+        line = f.readline().split(' ')    
+        line.pop()    
         coverages.append(list(map(int, line)))
 
     return Instance(name, size, cover_size, distances, coverages)
 
-  def make_cand_list(self):
-    pass
+  def get_remove_cand_list(self):
+    remove_cands = []
+    visited_vertices = self._solution.visited_vertices  
+    covered_vertices = self._solution.get_covered_vertices()
+
+    multi_covered_vertice = [vertice for n, vertice in enumerate(covered_vertices) if vertice in covered_vertices[:n]]
+
+    for mult in multi_covered_vertice: 
+      if mult in visited_vertices:
+        remove_cands.append(mult)
+
+    return remove_cands
 
   def make_tabu_list(self):
-    pass
-
-  def evaluate(solution):
-    pass
+    pass 
 
   def evaluate_insertion_cost(element, solution):
     pass
 
-  def evaluate_removal_cost(element, solution):
-    pass
+  def evaluate_removal_cost(self, element):
+    print(element, self._solution.edges[element])
 
   def evaluate_exchange_cost(element, solution):
     pass
@@ -70,17 +79,38 @@ class TS_CPS:
     return Solution(self.instance, edges)
 
   def constructive_heuristic(self):
-    pass
+    self._solution = self.create_empty_solution()
+
+    i = 0
+    
+    while(not(self._solution.all_vertices_covered())):
+      self._solution.edges[i][i+1] = 1
+      self._solution.evaluate()
+      i+=1
+
+    self._solution.edges[i-1][i] = 0    
+    self._solution.edges[i-1][0] = 1
+
+    self._solution.evaluate() 
+
 
   def neighborhood_move(self):
-    pass
+    remove_cands = self.get_remove_cand_list()   
+    
+    for cand in remove_cands:
+      removal_cost = self.evaluate_removal_cost(cand)
+    
 
   def solve(self):    
-    start_time = datetime.now()
+    start_time = datetime.now()    
 
-    self._best_solution = self.create_empty_solution()
-    # self.constructive_heuristic()
-    self._tabu_list = self.make_tabu_list()    
+    self.constructive_heuristic()
+
+    self._best_solution = self._solution
+
+    print(self._solution)
+
+    self.make_tabu_list() 
 
     for i in range(self.iterations):      
       self.neighborhood_move()

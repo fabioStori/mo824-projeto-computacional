@@ -7,7 +7,7 @@ class Solution():
     self.covered_vertices = []
 
   def __str__(self):
-    return f"Solution: cost = {self.cost}, visted vertices = {self.visited_vertices}, covered vertices = {self.visited_vertices}\n"
+    return f"Solution: cost = {self.cost}, visted vertices = {self.visited_vertices}, covered vertices = {self.covered_vertices}\n"
 
   def getVisitedVertices(self):
     size = len(self.edges)
@@ -19,25 +19,35 @@ class Solution():
 
     return visited_vertices
 
-  def getCoveredVertices(self):       
+  def get_covered_vertices(self):       
     covered_vertices = []   
 
     for vertice in self.visited_vertices:
       for cover in self.instance.coverages[vertice]:
-        covered_vertices.append(cover)    
-    
-    return getUniqueValues(covered_vertices)
+        covered_vertices.append(cover)      
 
-  def evaluateSolutionCost(self):     
-    #TODO
-    return 0
+    return covered_vertices
+
+  def get_uniques_covered_vertices(self):
+    return get_unique_values(self.get_covered_vertices())
+
+  def evaluateSolutionCost(self):  
+    sum = 0
+    for row in range(self.instance.size):
+      for col in range(self.instance.size):
+        sum = sum + self.edges[row][col] * self.instance.distances[row][col] 
+
+    return sum
 
   def evaluate(self):
     self.cost = self.evaluateSolutionCost()
     self.visited_vertices = self.getVisitedVertices()
-    self.covered_vertices = self.getCoveredVertices()
+    self.covered_vertices = self.get_uniques_covered_vertices()
+
+  def all_vertices_covered(self):
+    return len(self.covered_vertices) == self.instance.size
 
 # Utils
-def getUniqueValues(l):
+def get_unique_values(l):
   return list(dict.fromkeys(l))
     
