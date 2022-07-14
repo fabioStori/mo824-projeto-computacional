@@ -67,28 +67,43 @@ class TS_CSP:
     self._tabu_list = TabuList(2*self.ternure)     
 
 
-  def evaluate_insertion_cost(self, ref_vertice, insert_vertice):    
+  def evaluate_insertion_cost(self, ref_vertice, insert_vertice):
     cost = None
     dest_vertice = self._solution.edges[ref_vertice]
-    if(self.evaluate_insertion_viability()):         
-      removed_edge_cost = self.instance.distances[ref_vertice][dest_vertice]  
-      inserted_edges_cost = self.instance.distances[ref_vertice][insert_vertice] + self.instance.distances[insert_vertice][dest_vertice]
-      cost = inserted_edges_cost - removed_edge_cost    
+    removed_edge_cost = self.instance.distances[ref_vertice][dest_vertice]
+    inserted_edges_cost = self.instance.distances[ref_vertice][insert_vertice] + self.instance.distances[insert_vertice][dest_vertice]
+    cost = inserted_edges_cost - removed_edge_cost
     return cost
-  
-  def evaluate_insertion_viability(self):
-    return True      
 
-  def evaluate_removal_cost(self, element):       
+  def evaluate_removal_cost(self, element, accept_non_viable_solution = False):
     cost = None
-    if(self.evaluate_removal_viability(element)):    
+    if(self.evaluate_removal_viability(element) or accept_non_viable_solution):
       in_vertice = self._solution.edges.index(element)
       out_vertice = self._solution.edges[element]
-      in_cost = self.instance.distances[in_vertice][element]  
+      in_cost = self.instance.distances[in_vertice][element]
       out_cost = self.instance.distances[element][out_vertice]
       new_cost = self.instance.distances[in_vertice][out_vertice]
       cost = new_cost - (in_cost + out_cost)
     return cost
+
+  def evaluate_swap_cost(self, element):       
+    cost = 0
+    best_vertice = None
+    all_visited_minus_current = deepcopy(self._solution.visited_vertices)
+    all_visited_minus_current.remove(self._solution.edges[element])
+    all_visited_minus_current.remove(self._solution.edges.index(element))
+    all_visited_minus_current.remove(element)
+    
+    for vertice in all_visited_minus_current:
+      removal_cost = self.evaluate_removal_cost(vertice, True)
+      insertion_cost = self.evaluate_insertion_cost(element, vertice)
+      final_cost = insertion_cost + removal_cost
+      
+      if (final_cost < cost):
+        best_vertice = vertice
+        cost = final_cost
+    
+    return cost, best_vertice
 
   def evaluate_removal_viability(self, element):  
     element_cover = self.instance.coverages[element]
@@ -184,6 +199,10 @@ class TS_CSP:
     best_removal_cost = 0
     best_removal_cand = None
 
+    best_swap_cost = 0
+    best_swap_cand = None
+    best_swap_ref = None
+
     best_insert_cost = 0
     best_insert_cand = None
 
@@ -199,6 +218,12 @@ class TS_CSP:
       if removal_cost and removal_cost < best_removal_cost:
         best_removal_cost = removal_cost
         best_removal_cand = visited_vertice
+        
+      swap_cost, swap_vertice = self.evaluate_swap_cost(visited_vertice) 
+      if swap_cost and swap_cost < best_swap_cost:
+        best_swap_cost = swap_cost
+        best_swap_cand = swap_vertice
+        best_swap_ref = visited_vertice
         
       for unvisited_vertice in unvisited_vertices:  
         # if unvisited_vertice not in self._tabu_list:    
@@ -216,29 +241,38 @@ class TS_CSP:
 
     # print('remove:', best_removal_cost, best_removal_cand)
     # print('insert:', best_insert_cost, best_insert_cand, insert_ref)
-    # print('exchange:', best_exchange_cost, best_exchange_cand, exchange_remove_cand)       
+    # print('exchange:', best_exchange_cost, best_exchange_cand, exchange_remove_cand)
     
     if(best_removal_cand != None and 
         best_removal_cost < 0 and 
-          (best_removal_cost <= best_insert_cost and best_removal_cost <= best_exchange_cost) and
+          (best_removal_cost <= best_insert_cost and best_removal_cost <= best_exchange_cost and best_removal_cost <= best_swap_cost) and
             (best_removal_cand not in self._tabu_list or self._best_solution.cost > self._solution.cost + best_removal_cost)):
-      print('remove', best_removal_cand)
+      # print('remove', best_removal_cand, best_removal_cost)
       self.remove_vertice_from_solution(best_removal_cand)
       self._tabu_list.add(best_removal_cand)    
+    
+    elif(best_swap_cand != None and 
+        best_swap_cost < 0 and 
+          (best_swap_cost <= best_insert_cost and best_swap_cost <= best_exchange_cost and best_swap_cost <= best_removal_cost) and
+            (best_swap_cand not in self._tabu_list or self._best_solution.cost > self._solution.cost + best_swap_cost)):
+      # print('swap', best_swap_cand)
+      self.swap_vertice_from_solution(best_swap_cand, best_swap_ref)
+      self._tabu_list.add(best_swap_cand)
+      self._tabu_list.add(best_swap_ref) 
 
     elif(best_insert_cand != None and
           best_insert_cost < 0 and
-            (best_insert_cost <= best_removal_cost and best_insert_cost <= best_exchange_cost) and
+            (best_insert_cost <= best_removal_cost and best_insert_cost <= best_exchange_cost and best_insert_cost <= best_swap_cost) and
               (best_insert_cand not in self._tabu_list or self._best_solution.cost > self._solution.cost + best_insert_cost)):
-      print('insert', best_insert_cand, insert_ref)
-      self.insert_vertice_in_solution( best_insert_cand, insert_ref)
+      # print('insert', best_insert_cand, insert_ref)
+      self.insert_vertice_in_solution(best_insert_cand, insert_ref)
       self._tabu_list.add(best_insert_cand)  
 
     elif(best_exchange_cand != None and
            best_exchange_cost < 0 and
-            (best_exchange_cost <= best_removal_cost and best_exchange_cost <= best_insert_cost) and
+            (best_exchange_cost <= best_removal_cost and best_exchange_cost <= best_insert_cost and best_exchange_cost <= best_swap_cost) and
               (best_exchange_cand not in self._tabu_list and exchange_remove_cand not in self._tabu_list or self._best_solution.cost > self._solution.cost + best_exchange_cost)):
-      print('exchange', exchange_remove_cand, 'for', best_exchange_cand)
+      # print('exchange', exchange_remove_cand, 'for', best_exchange_cand)
       self.exchange_vertices_in_solution(best_exchange_cand, exchange_remove_cand)
       self._tabu_list.add(best_exchange_cand) 
       self._tabu_list.add(exchange_remove_cand) 
@@ -255,9 +289,13 @@ class TS_CSP:
     out_vertice = self._solution.edges[vertice]
 
     self._solution.edges[vertice] = -1
-    self._solution.edges[in_vertice] = out_vertice 
+    self._solution.edges[in_vertice] = out_vertice
 
-  def insert_vertice_in_solution(self, inserted_vertice, ref_vertice): 
+  def swap_vertice_from_solution(self, best_swap_cand, best_swap_ref):
+    self.remove_vertice_from_solution(best_swap_cand)
+    self.insert_vertice_in_solution(best_swap_cand, best_swap_ref)
+
+  def insert_vertice_in_solution(self, inserted_vertice, ref_vertice):
     edges = self._solution.edges 
     dest_vertice = edges[ref_vertice]  
     edges[ref_vertice] = inserted_vertice
@@ -293,7 +331,7 @@ class TS_CSP:
       if (self._solution.cost < self._best_solution.cost):
         self._best_solution = deepcopy(self._solution)
         print(self._best_solution)
-        print('tabulist', self._tabu_list)
+        # print('tabulist', self._tabu_list)
       
       elapsed_time = datetime.now() - start_time
 
