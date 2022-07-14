@@ -1,0 +1,2 @@
+class TabuList:
+  pass

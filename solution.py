@@ -40,16 +40,19 @@ class Solution():
     return sum
 
   def evaluate(self):
+    
     self.visited_vertices = self.get_visited_vertices()
     self.covered_vertices = self.get_uniques_covered_vertices()
     self.cost = self.evaluate_solution_cost()
+
+    # print('evaluate', self.visited_vertices, self.covered_vertices, self.cost)
 
   def all_vertices_covered(self):
     return len(self.covered_vertices) == self.instance.size
 
   def get_unvisted_vertices(self):
     all_vertices = list(range(self.instance.size))    
-    return diff_between_list(all_vertices, self.visited_vertices)
+    return diff_between_lists(all_vertices, self.visited_vertices)
 
 
     
