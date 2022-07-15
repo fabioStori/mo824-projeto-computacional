@@ -8,13 +8,14 @@ from tabulist import TabuList
 from utils import *
 
 class TS_CSP:   
-  def __init__(self, ternure_porcent, iterations, max_time, instance_file):
+  def __init__(self, ternure_porcent, iterations, max_time, instance_file, improve='best'):
     self.instance = self.read_instance_file(instance_file)
     # self.all_cand_list = self.make_cand_list()
     self.rnd = random    
     self.ternure = ternure_porcent*self.instance.size
     self.iterations = iterations
     self.max_time = max_time
+    self.improve = improve
 
     self._best_solution = None
     self._solution = None
@@ -192,6 +193,27 @@ class TS_CSP:
 
     # print('meta', self._solution.edges)
 
+  def constructive_heuristic_v3(self):
+    self._solution = self.create_empty_solution()     
+
+    start_vertice = self.rnd.randrange(self.instance.size)
+    
+    i = start_vertice
+
+    while(not(self._solution.all_vertices_covered())): 
+      random_vertice = self.rnd.randrange(self.instance.size)
+      # print(random_vertice, self._solution.get_covered_vertices(), self._solution.edges)
+      if random_vertice not in self._solution.covered_vertices and random_vertice != start_vertice:
+        self._solution.edges[i] = random_vertice        
+        i = random_vertice
+        self._solution.evaluate()       
+
+    
+    self._solution.edges[i] = start_vertice
+    self._solution.evaluate() 
+
+    # print('meta', self._solution.edges)
+
 
   def neighborhood_move(self):
     unvisited_vertices = self._solution.get_unvisted_vertices()  
@@ -211,33 +233,47 @@ class TS_CSP:
 
     insert_ref = None
     exchange_remove_cand = None
+    
+    best_found = False
 
     for visited_vertice in self._solution.visited_vertices:
-      # if visited_vertice not in self._tabu_list:   
       removal_cost = self.evaluate_removal_cost(visited_vertice) 
       if removal_cost and removal_cost < best_removal_cost:
         best_removal_cost = removal_cost
         best_removal_cand = visited_vertice
+        if(self.improve == 'first'):
+          break        
         
       swap_cost, swap_vertice = self.evaluate_swap_cost(visited_vertice) 
       if swap_cost and swap_cost < best_swap_cost:
         best_swap_cost = swap_cost
         best_swap_cand = swap_vertice
-        best_swap_ref = visited_vertice
+        best_swap_ref = visited_vertice 
+        if(self.improve == 'first'):
+          break       
         
-      for unvisited_vertice in unvisited_vertices:  
-        # if unvisited_vertice not in self._tabu_list:    
+      for unvisited_vertice in unvisited_vertices:             
         insert_cost = self.evaluate_insertion_cost(visited_vertice, unvisited_vertice)         
         if insert_cost and insert_cost < best_insert_cost:
           best_insert_cost = insert_cost
           best_insert_cand = unvisited_vertice
           insert_ref = visited_vertice
+          if(self.improve == 'first'):
+            best_found = True
+            break   
 
         exchange_cost = self.evaluate_exchange_cost(visited_vertice, unvisited_vertice)    
         if exchange_cost and exchange_cost < best_exchange_cost:
           best_exchange_cost = exchange_cost
           best_exchange_cand = unvisited_vertice
-          exchange_remove_cand = visited_vertice  
+          exchange_remove_cand = visited_vertice
+          if(self.improve == 'first'):
+            best_found = True
+            break 
+
+      if(self.improve == 'first' and best_found):
+        break
+                   
 
     # print('remove:', best_removal_cost, best_removal_cand)
     # print('insert:', best_insert_cost, best_insert_cand, insert_ref)
