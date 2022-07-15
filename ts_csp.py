@@ -8,11 +8,11 @@ from tabulist import TabuList
 from utils import *
 
 class TS_CSP:   
-  def __init__(self, ternure, iterations, max_time, instance_file):
+  def __init__(self, ternure_porcent, iterations, max_time, instance_file):
     self.instance = self.read_instance_file(instance_file)
     # self.all_cand_list = self.make_cand_list()
     self.rnd = random    
-    self.ternure = ternure
+    self.ternure = ternure_porcent*self.instance.size
     self.iterations = iterations
     self.max_time = max_time
 
@@ -321,7 +321,7 @@ class TS_CSP:
 
     self._best_solution = deepcopy(self._solution)
 
-    print(self._solution)
+    print(self._solution.cost)
 
     self.make_tabu_list() 
 
@@ -330,15 +330,19 @@ class TS_CSP:
 
       if (self._solution.cost < self._best_solution.cost):
         self._best_solution = deepcopy(self._solution)
-        print(self._best_solution)
         # print('tabulist', self._tabu_list)
       
-      elapsed_time = datetime.now() - start_time
+      print(self._best_solution.cost)
+
+      elapsed_time = (datetime.now() - start_time).total_seconds()
 
       if not improve:
+        print("Interrupting: Solution not improving")
+        break      
+
+      if(self.max_time-1 < int(elapsed_time)):
+        print("Interrupting: Time Exceed")
         break
-      # if(elapsed_time > self.max_time):
-      #   print("Interrupting: Time Exceed")
 
     return self._best_solution, elapsed_time
       
