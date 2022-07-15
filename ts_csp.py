@@ -8,7 +8,7 @@ from tabulist import TabuList
 from utils import *
 
 class TS_CSP:   
-  def __init__(self, ternure_porcent, iterations, max_time, instance_file, improve='best'):
+  def __init__(self, ternure_porcent, iterations, max_time, instance_file, improve='best', const_heuristic='random'):
     self.instance = self.read_instance_file(instance_file)
     # self.all_cand_list = self.make_cand_list()
     self.rnd = random    
@@ -16,6 +16,7 @@ class TS_CSP:
     self.iterations = iterations
     self.max_time = max_time
     self.improve = improve
+    self.const_heuristic = const_heuristic
 
     self._best_solution = None
     self._solution = None
@@ -170,7 +171,7 @@ class TS_CSP:
     self._solution.edges[i-1] = 0
     self._solution.evaluate() 
 
-  def constructive_heuristic_v2(self):
+  def random_constructive_heuristic(self):
     self._solution = self.create_empty_solution()     
 
     start_vertice = self.rnd.randrange(self.instance.size)
@@ -193,26 +194,37 @@ class TS_CSP:
 
     # print('meta', self._solution.edges)
 
-  def constructive_heuristic_v3(self):
-    self._solution = self.create_empty_solution()     
+  def getBestNeighbor(self, vertice):
+    best_cost = float('inf')
+    best_neighbor = None
 
-    start_vertice = self.rnd.randrange(self.instance.size)
+    for i in range(self.instance.size):
+      cost = self.instance.distances[vertice][i]
+      cover = i in self._solution.covered_vertices
+
+      if(cost < best_cost and cost > 0 and not cover and i != vertice):
+        best_cost = cost
+        best_neighbor = i   
     
-    i = start_vertice
+    return best_cost, best_neighbor
+   
 
-    while(not(self._solution.all_vertices_covered())): 
-      random_vertice = self.rnd.randrange(self.instance.size)
-      # print(random_vertice, self._solution.get_covered_vertices(), self._solution.edges)
-      if random_vertice not in self._solution.covered_vertices and random_vertice != start_vertice:
-        self._solution.edges[i] = random_vertice        
-        i = random_vertice
-        self._solution.evaluate()       
+  def greedy_constructive_heuristic(self):
+    self._solution = self.create_empty_solution()
+    start_vertice = self.rnd.randrange(self.instance.size)    
+    vertice = start_vertice
 
-    
-    self._solution.edges[i] = start_vertice
+    coverage = self.instance.coverages[start_vertice]    
+
+    while (len(coverage) < self.instance.size):       
+      best_cost, best_vertice = self.getBestNeighbor(vertice)      
+      self._solution.edges[vertice] = best_vertice      
+      vertice = best_vertice
+      self._solution.evaluate()  
+      coverage = get_unique_values(sum_lists(self._solution.get_uniques_covered_vertices(), self.instance.coverages[vertice]))         
+  
+    self._solution.edges[vertice] = start_vertice
     self._solution.evaluate() 
-
-    # print('meta', self._solution.edges)
 
 
   def neighborhood_move(self):
@@ -351,9 +363,12 @@ class TS_CSP:
     
     self.rnd.seed(seed) 
 
-    start_time = datetime.now()    
+    start_time = datetime.now()  
 
-    self.constructive_heuristic_v2()
+    if (self.const_heuristic == 'greedy'):
+      self.greedy_constructive_heuristic()
+    else:
+      self.random_constructive_heuristic()
 
     self._best_solution = deepcopy(self._solution)
 
