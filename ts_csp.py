@@ -8,7 +8,7 @@ from tabulist import TabuList
 from utils import *
 
 class TS_CSP:   
-  def __init__(self, ternure_porcent, iterations, max_time, instance_file, improve='best', const_heuristic='random'):
+  def __init__(self, ternure_porcent, iterations, max_time, instance_file, improve='best', const_heuristic='random', probabilistic_ts=False, max_iter_no_improve=None):
     self.instance = self.read_instance_file(instance_file)
     # self.all_cand_list = self.make_cand_list()
     self.rnd = random    
@@ -17,6 +17,8 @@ class TS_CSP:
     self.max_time = max_time
     self.improve = improve
     self.const_heuristic = const_heuristic
+    self.probabilistic_ts = probabilistic_ts
+    self.max_iter_no_improve = max_iter_no_improve
 
     self._best_solution = None
     self._solution = None
@@ -225,11 +227,18 @@ class TS_CSP:
   
     self._solution.edges[vertice] = start_vertice
     self._solution.evaluate() 
+  
+  def get_random_neighborhood(self, current_list):
+    list = deepcopy(current_list)
+
+    rand_size = self.rnd.randrange(1, len(list))
+    random.shuffle(list)    
+    
+    return list[:rand_size]
 
 
   def neighborhood_move(self):
-    unvisited_vertices = self._solution.get_unvisted_vertices()  
-
+    
     best_removal_cost = 0
     best_removal_cand = None
 
@@ -248,7 +257,15 @@ class TS_CSP:
     
     best_found = False
 
-    for visited_vertice in self._solution.visited_vertices:
+    unvisited_vertices = self._solution.get_unvisted_vertices()  
+    visited_vertices = self._solution.visited_vertices
+
+    if(self.probabilistic_ts == True):
+      visited_vertices = self.get_random_neighborhood(visited_vertices)
+      unvisited_vertices = self.get_random_neighborhood(unvisited_vertices)
+
+
+    for visited_vertice in visited_vertices:
       removal_cost = self.evaluate_removal_cost(visited_vertice) 
       if removal_cost and removal_cost < best_removal_cost:
         best_removal_cost = removal_cost
@@ -262,7 +279,7 @@ class TS_CSP:
         best_swap_cand = swap_vertice
         best_swap_ref = visited_vertice 
         if(self.improve == 'first'):
-          break       
+          break
         
       for unvisited_vertice in unvisited_vertices:             
         insert_cost = self.evaluate_insertion_cost(visited_vertice, unvisited_vertice)         
@@ -323,14 +340,9 @@ class TS_CSP:
       # print('exchange', exchange_remove_cand, 'for', best_exchange_cand)
       self.exchange_vertices_in_solution(best_exchange_cand, exchange_remove_cand)
       self._tabu_list.add(best_exchange_cand) 
-      self._tabu_list.add(exchange_remove_cand) 
+      self._tabu_list.add(exchange_remove_cand)     
 
-    else: 
-      return False
-
-    self._solution.evaluate()   
-    return True
-
+    self._solution.evaluate() 
 
   def remove_vertice_from_solution(self, vertice):    
     in_vertice = self._solution.edges.index(vertice)
@@ -376,20 +388,25 @@ class TS_CSP:
 
     self.make_tabu_list() 
 
+    iter_no_improve = 0 
+
     for i in range(self.iterations):      
-      improve = self.neighborhood_move()    
+      self.neighborhood_move()    
 
       if (self._solution.cost < self._best_solution.cost):
         self._best_solution = deepcopy(self._solution)
+        iter_no_improve = 0
         # print('tabulist', self._tabu_list)
+      else:
+        iter_no_improve+=1
       
       print(self._best_solution.cost)
 
       elapsed_time = (datetime.now() - start_time).total_seconds()
-
-      if not improve:
-        print("Interrupting: Solution not improving")
-        break      
+      
+      if self.max_iter_no_improve != None and iter_no_improve > self.max_iter_no_improve:
+        print("Interrupting: Max iteration without improvement reach")
+        break  
 
       if(self.max_time-1 < int(elapsed_time)):
         print("Interrupting: Time Exceed")
