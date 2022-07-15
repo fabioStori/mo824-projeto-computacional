@@ -54,5 +54,30 @@ class Solution():
     all_vertices = list(range(self.instance.size))    
     return diff_between_lists(all_vertices, self.visited_vertices)
 
+  def remove_vertice_from_solution(self, vertice):    
+    in_vertice = self.edges.index(vertice)
+    out_vertice = self.edges[vertice]
+
+    self.edges[vertice] = -1
+    self.edges[in_vertice] = out_vertice
+
+  def swap_vertice_from_solution(self, best_swap_cand, best_swap_ref):
+    self.remove_vertice_from_solution(best_swap_cand)
+    self.insert_vertice_in_solution(best_swap_cand, best_swap_ref)
+
+  def insert_vertice_in_solution(self, inserted_vertice, ref_vertice):
+    edges = self.edges 
+    dest_vertice = edges[ref_vertice]  
+    edges[ref_vertice] = inserted_vertice
+    edges[inserted_vertice] = dest_vertice    
+
+  def exchange_vertices_in_solution(self, inserted_vertice, removed_vertice):        
+    edges = self.edges    
+    orig_vertice = edges.index(removed_vertice)
+    dest_vertice = edges[removed_vertice]
+    edges[removed_vertice] = -1
+    edges[orig_vertice] = inserted_vertice
+    edges[inserted_vertice] = dest_vertice
+
 
     

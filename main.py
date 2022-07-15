@@ -14,14 +14,17 @@ files = os.listdir('InstancesCSP')
 
 # tabu_search = TS_CSP(ternure_porcent=0.3, iterations=1000, max_time=max_time, instance_file='berlin52-9.csp2', improve='best', const_heuristic='greedy')
 tabu_search = TS_CSP(
-  ternure_porcent=0.3,
-  iterations=100,
-  max_time=30*60,
-  instance_file='berlin52-11.csp2',
+  ternure_porcent=0.2,
+  iterations=1000,
+  max_time=60*60,
+  instance_file='eil51-11.csp2',
+  improve='best',
   const_heuristic='greedy',
   probabilistic_ts=True,
-  max_iter_no_improve=10
+  # max_iter_no_improve=500,
+  diversification=True,
+  diversificate_in=10
 )
 best_solution, total_time = tabu_search.solve(seed=2)
 
-# print(best_solution, total_time)
+print(best_solution, total_time)
